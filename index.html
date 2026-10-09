@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>口袋寶箱</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>口袋寶箱</h1>
+    <div class="dev">
+      <span class="sub">開發工具：</span>
+      <button data-speed="1" class="on">1 倍速</button>
+      <button data-speed="10">10 倍速</button>
+      <button data-speed="100">100 倍速</button>
+      <button id="resetSave" class="ghost">清除存檔</button>
+    </div>
+  </header>
+  <div id="toast" class="toast" hidden></div>
+
+  <main class="cols">
+    <section class="panel">
+      <div id="charStats"></div>
+      <h2>身上裝備</h2>
+      <ul id="equipList" class="items"></ul>
+    </section>
+
+    <section class="panel battle">
+      <h2 id="zone"></h2>
+      <div id="monster" class="monster"></div>
+      <div class="log-head">
+        <h2>戰鬥紀錄</h2>
+        <label class="sub"><input type="checkbox" id="importantOnly"> 只看重要事件</label>
+      </div>
+      <ul id="log" class="log"></ul>
+    </section>
+
+    <section class="panel">
+      <div class="bag-head">
+        <h2>背包</h2>
+        <span id="bagCount" class="num sub"></span>
+      </div>
+      <label class="sub auto">自動分解：
+        <select id="autoDecompose">
+          <option value="0">不分解</option>
+          <option value="1">普通</option>
+          <option value="2">普通、魔法</option>
+          <option value="3">普通、魔法、稀有</option>
+        </select>
+      </label>
+      <div id="detail" class="detail" hidden></div>
+      <ul id="bagList" class="items"></ul>
+    </section>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
