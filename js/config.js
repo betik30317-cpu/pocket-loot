@@ -1,6 +1,8 @@
 // 所有數值集中在這裡，對應企劃文件「07 數值表」。
 // 調整數值時先在數值表確認節奏，再改這裡，不需要動其他程式。
 
+function pct(v) { return `${Math.round(v * 1000) / 10}%`; }
+
 export const CONFIG = {
   version: 1,
 
@@ -91,8 +93,28 @@ export const CONFIG = {
     { slot: 'accessory', name: '四葉草手環', effect: 'bigCrit',      desc: '暴擊傷害由 2 倍提高為 3 倍' },
   ],
 
-  // 強化（07），里程碑 2 使用
+  // 強化（07）：費用 = 裝備所屬區域的一般怪金幣 × 係數（+1 到 +5）
   enhance: { perLevel: 0.1, maxLevel: 5, costCoef: [20, 40, 80, 160, 320] },
+
+  // 技能樹（03）：全部是被動技能，每級 1 點技能點，最高 5 級
+  skills: {
+    maxLevel: 5,
+    unlockAt: 3,   // 第二個技能需要同分支第一個技能達到 3 級
+    branches: [
+      { name: '力氣', skills: [
+        { id: 'smash', name: '用力敲', per: 0.04,  text: v => `攻擊 +${pct(v)}` },
+        { id: 'combo', name: '連打',   per: 0.03,  text: v => `每回合 ${pct(v)} 機率多出手一次` },
+      ] },
+      { name: '硬殼', skills: [
+        { id: 'thick', name: '厚臉皮',   per: 0.05,  text: v => `防禦 +${pct(v)}` },
+        { id: 'nap',   name: '打盹回血', per: 0.002, text: v => `每秒生命回復 +${pct(v)}` },
+      ] },
+      { name: '好運', skills: [
+        { id: 'clover', name: '幸運草', per: 0.02, text: v => `暴擊率 +${pct(v)}` },
+        { id: 'finder', name: '撿到了', per: 0.05, text: v => `掉寶率 +${pct(v)}` },
+      ] },
+    ],
+  },
 
   bagSize: 30,
   logLines: 50,

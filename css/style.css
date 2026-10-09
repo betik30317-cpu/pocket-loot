@@ -88,7 +88,35 @@ button:focus-visible, select:focus-visible, .item:focus-visible { outline: 2px s
 .log-bad { color: var(--down); font-weight: 600; }
 .log-legend { color: var(--r3); font-weight: 700; border: 1px solid var(--r3) !important; border-radius: 6px; padding: 2px 6px !important; animation: blink 1.2s ease-in-out 3; }
 
-.auto { display: block; margin: 6px 0 10px; }
+.bag-controls { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 6px 0 10px; }
+.bag-controls label { display: flex; align-items: center; gap: 6px; }
+.hint { margin: 0 0 10px; padding: 8px 10px; border-radius: 8px; font-size: 13px; color: var(--crit); background: rgba(255, 209, 102, .08); }
+button:disabled { opacity: .45; cursor: not-allowed; border-color: var(--line); }
+button.primary { background: var(--r1); border-color: var(--r1); color: #10142a; }
+
+.skill-btn { width: 100%; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; }
+.skill-btn.has-points { border-color: var(--up); }
+.badge { background: var(--up); color: #0f2a1a; border-radius: 999px; padding: 0 8px; font-size: 12px; font-weight: 700; }
+
+.overlay {
+  position: fixed; inset: 0; z-index: 20; background: rgba(12, 10, 22, .72);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 16px 24px; overflow-y: auto;
+}
+.overlay[hidden] { display: none; }
+.skills-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; width: min(860px, 100%); }
+.skills-head { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+.skills-head h2 { margin: 0; color: var(--text); font-size: 17px; margin-right: auto; }
+.branches { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 10px; }
+.branch { display: flex; flex-direction: column; gap: 10px; }
+.branch h3 { margin: 0; font-size: 14px; color: var(--text-2); }
+.skill { background: rgba(0,0,0,.2); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.skill button { margin-top: 6px; align-self: flex-start; }
+.skill.locked { opacity: .6; }
+.skill .lock { color: var(--crit); }
+.pips { display: flex; gap: 4px; margin: 2px 0 4px; }
+.pips i { width: 18px; height: 6px; border-radius: 3px; background: var(--line); }
+.pips i.on { background: var(--up); }
 .detail { background: rgba(0,0,0,.2); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
 .detail-title { font-weight: 700; }
 .affixes { margin: 6px 0; padding-left: 18px; }
@@ -112,4 +140,5 @@ button:focus-visible, select:focus-visible, .item:focus-visible { outline: 2px s
   .cols { grid-template-columns: 1fr; padding: 12px 16px; }
   .battle { min-height: 0; }
   .log { max-height: 40vh; }
+  .branches { grid-template-columns: 1fr; }
 }

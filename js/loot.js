@@ -67,6 +67,21 @@ export function rollDrop(state, zoneId, isElite, lootFind) {
   return makeItem(state, zoneId, rarity, slotId);
 }
 
+// 強化到下一級的費用；已達上限時回傳 null（07）
+export function enhanceCost(item) {
+  const lv = item.enh || 0;
+  if (lv >= CONFIG.enhance.maxLevel) return null;
+  return zoneOf(item.zone).gold * CONFIG.enhance.costCoef[lv];
+}
+
+export function enhanceItem(state, item) {
+  const cost = enhanceCost(item);
+  if (cost === null || state.gold < cost) return false;
+  state.gold -= cost;
+  item.enh = (item.enh || 0) + 1;
+  return true;
+}
+
 export function decomposeValue(item) {
   return zoneOf(item.zone).gold * CONFIG.rarities[item.rarity].decompose;
 }

@@ -48,13 +48,17 @@ export function tick(state) {
   const mon = state.monster;
   if (state.hp > s.hp) state.hp = s.hp;
 
-  // 角色出手
-  const crit = Math.random() < s.crit;
+  // 角色出手；技能「連打」有機率再出手一次
   const critMult = s.effects.has('bigCrit') ? 3 : CONFIG.player.critMult;
-  const dmg = Math.max(1, s.atk - mon.def) * (crit ? critMult : 1);
-  mon.hp -= dmg;
-  addLog(state, `${crit ? '暴擊！' : ''}你對 ${mon.name} 造成 ${fmt(dmg)} 點傷害`, crit ? 'crit' : 'hit');
-  if (crit && s.effects.has('critHeal')) state.hp = Math.min(s.hp, state.hp + s.hp * 0.03);
+  const strike = prefix => {
+    const crit = Math.random() < s.crit;
+    const dmg = Math.max(1, s.atk - mon.def) * (crit ? critMult : 1);
+    mon.hp -= dmg;
+    addLog(state, `${prefix}${crit ? '暴擊！' : ''}你對 ${mon.name} 造成 ${fmt(dmg)} 點傷害`, crit ? 'crit' : 'hit');
+    if (crit && s.effects.has('critHeal')) state.hp = Math.min(s.hp, state.hp + s.hp * 0.03);
+  };
+  strike('');
+  if (mon.hp > 0 && s.extraHit > 0 && Math.random() < s.extraHit) strike('連打！');
 
   if (mon.hp <= 0) {
     const zone = CONFIG.zones[state.zone - 1];
@@ -96,7 +100,7 @@ export function tick(state) {
   addLog(state, `${mon.name} ${mCrit ? '重擊！' : ''}對你造成 ${fmt(mDmg)} 點傷害`, 'hurt');
 
   // 每秒回復
-  state.hp = Math.min(s.hp, state.hp + s.hp * CONFIG.player.regenPerSec);
+  state.hp = Math.min(s.hp, state.hp + s.hp * s.regen);
 
   if (state.hp <= 0) {
     state.stats.deaths++;

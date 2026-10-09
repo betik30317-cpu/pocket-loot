@@ -41,18 +41,30 @@
         <h2>背包</h2>
         <span id="bagCount" class="num sub"></span>
       </div>
-      <label class="sub auto">自動分解：
-        <select id="autoDecompose">
-          <option value="0">不分解</option>
-          <option value="1">普通</option>
-          <option value="2">普通、魔法</option>
-          <option value="3">普通、魔法、稀有</option>
-        </select>
-      </label>
+      <div class="bag-controls">
+        <label class="sub">自動分解
+          <select id="autoDecompose">
+            <option value="0">不分解</option>
+            <option value="1">普通</option>
+            <option value="2">普通、魔法</option>
+            <option value="3">普通、魔法、稀有</option>
+          </select>
+        </label>
+        <label class="sub">排序
+          <select id="bagSort">
+            <option value="rarity">稀有度</option>
+            <option value="slot">欄位</option>
+            <option value="zone">區域</option>
+          </select>
+        </label>
+      </div>
+      <p id="bagHint" class="hint" hidden></p>
       <div id="detail" class="detail" hidden></div>
       <ul id="bagList" class="items"></ul>
     </section>
   </main>
+
+  <div id="skills" class="overlay" hidden></div>
 
   <script type="module" src="js/main.js"></script>
 </body>
