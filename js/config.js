@@ -25,7 +25,8 @@ export const CONFIG = {
     eliteChance: 0.05,
     eliteStatMult: 2,
     eliteRewardMult: 3,
-    bossHpMult: 6, bossAtkMult: 2.2, bossDefMult: 1.2,
+    // 里程碑 3 以通關模擬重新調整（原本 6 倍、2.2 倍沒算到強化與技能，約 1.5 小時就通關）
+    bossHpMult: 10, bossAtkMult: 3.6, bossDefMult: 1.2,
     bossRewardMult: 20,
   },
 
@@ -56,6 +57,13 @@ export const CONFIG = {
     eliteChance: 0.4,
     rarityChance: [0.7, 0.22, 0.075, 0.005], // 普通、魔法、稀有、傳說
     pityKills: 1500,
+    bossLegendChance: 0.1,   // 首領：稀有 90%、傳說 10%
+    bossMappedChance: 0.7,   // 首領掉傳說時，70% 是該區對應的那件
+  },
+
+  offline: {
+    minSeconds: 60,          // 離開超過 1 分鐘才走離線結算（08、10）
+    sampleTicks: 1800,       // 估算擊殺速度時模擬的回合數
   },
 
   // 稀有度（04、09）
@@ -117,6 +125,7 @@ export const CONFIG = {
   },
 
   bagSize: 30,
+  legendOverflow: 20,        // 傳說可超出背包的格數；再多的傳說也會分解成金幣
   logLines: 50,
 };
 

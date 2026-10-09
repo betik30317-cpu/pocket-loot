@@ -10,10 +10,17 @@
   <header class="top">
     <h1>口袋寶箱</h1>
     <div class="dev">
+      <button data-ui="openSave">存檔碼</button>
       <span class="sub">開發工具：</span>
       <button data-speed="1" class="on">1 倍速</button>
       <button data-speed="10">10 倍速</button>
       <button data-speed="100">100 倍速</button>
+      <select id="devOffline" aria-label="模擬離線時間">
+        <option value="3600">離線 1 小時</option>
+        <option value="28800">離線 8 小時</option>
+        <option value="86400">離線 1 天</option>
+      </select>
+      <button id="devOfflineGo" class="ghost">模擬離線</button>
       <button id="resetSave" class="ghost">清除存檔</button>
     </div>
   </header>
@@ -27,7 +34,11 @@
     </section>
 
     <section class="panel battle">
-      <h2 id="zone"></h2>
+      <div id="zoneBar" class="zone-bar"></div>
+      <div class="zone-head">
+        <h2 id="zone"></h2>
+        <div id="bossBar"></div>
+      </div>
       <div id="monster" class="monster"></div>
       <div class="log-head">
         <h2>戰鬥紀錄</h2>
@@ -65,6 +76,7 @@
   </main>
 
   <div id="skills" class="overlay" hidden></div>
+  <div id="modal" class="overlay" hidden></div>
 
   <script type="module" src="js/main.js"></script>
 </body>

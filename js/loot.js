@@ -82,6 +82,24 @@ export function enhanceItem(state, item) {
   return true;
 }
 
+// 首領必掉 1 件：稀有 90%、傳說 10%；掉到傳說時 70% 是該區對應的那件（05）
+export function rollBossDrop(state, zoneId) {
+  state.killsSinceLegend++;
+  const d = CONFIG.drops;
+  const legend = state.killsSinceLegend >= d.pityKills || Math.random() < d.bossLegendChance;
+  if (!legend) return makeItem(state, zoneId, 2);
+  state.killsSinceLegend = 0;
+  const mapped = CONFIG.zones[zoneId - 1].bossLegend;
+  let slotId;
+  if (mapped && Math.random() < d.bossMappedChance) {
+    slotId = mapped;
+  } else {
+    const others = CONFIG.legendaries.filter(l => l.slot !== mapped);
+    slotId = pick(others).slot;
+  }
+  return makeItem(state, zoneId, 3, slotId);
+}
+
 export function decomposeValue(item) {
   return zoneOf(item.zone).gold * CONFIG.rarities[item.rarity].decompose;
 }
@@ -89,7 +107,8 @@ export function decomposeValue(item) {
 // 放進背包或自動分解。回傳 { kept: true } 或 { kept: false, gold }
 export function storeItem(state, item) {
   const belowThreshold = item.rarity < state.autoDecompose && !item.legend;
-  const bagFull = state.bag.length >= CONFIG.bagSize && !item.legend;
+  const limit = item.legend ? CONFIG.bagSize + CONFIG.legendOverflow : CONFIG.bagSize;
+  const bagFull = state.bag.length >= limit;
   if (belowThreshold || bagFull) {
     const gold = decomposeValue(item);
     state.gold += gold;

@@ -1,8 +1,11 @@
 import { CONFIG, STAT_NAMES, PERCENT_STATS } from './config.js';
 import {
   computeStats, expToNext, skillPointsFree, learnBlocker, learnSkill, resetSkills,
+  exportCode, importCode,
 } from './state.js';
 import { decomposeValue, enhanceCost, enhanceItem } from './loot.js';
+import { startBoss, abandonBoss, changeZone } from './combat.js';
+import { formatDuration } from './offline.js';
 
 const $ = sel => document.querySelector(sel);
 const STAT_ORDER = ['atk', 'hp', 'def', 'crit', 'loot'];
@@ -14,6 +17,7 @@ let importantOnly = false;
 let skillsOpen = false;
 let toastTimer = null;
 let onChange = () => {};
+let onImport = () => {};
 
 export function fmtStat(stat, v) {
   if (PERCENT_STATS.has(stat)) return (Math.round(v * 1000) / 10).toFixed(1) + '%';
@@ -101,10 +105,25 @@ function renderChar() {
 function renderBattle() {
   const zone = CONFIG.zones[state.zone - 1];
   const m = state.monster;
+  const inBoss = m && m.boss;
+
+  setHTML($('#zoneBar'), CONFIG.zones.map(z => {
+    const locked = z.id > state.unlockedZone;
+    const cur = z.id === state.zone ? ' current' : '';
+    const done = state.bossesDefeated.includes(z.id) ? '<span class="done" aria-label="首領已擊敗">✓</span>' : '';
+    return `<button data-zone="${z.id}" class="zone-btn${cur}"${locked ? ' disabled aria-label="尚未解鎖"' : ''}>${z.icon} ${z.name}${done}</button>`;
+  }).join(''));
+
   setHTML($('#zone'), `${zone.icon} 第 ${zone.id} 區　${zone.name}`);
+  const beaten = state.bossesDefeated.includes(zone.id);
+  setHTML($('#bossBar'), inBoss
+    ? '<button data-ui="abandonBoss" class="ghost">離開首領戰</button>'
+    : `<button data-ui="startBoss" class="boss-btn">${beaten ? '再次挑戰' : '挑戰首領'}：${zone.boss}</button>`);
+
   setHTML($('#monster'), m
-    ? `<div class="row"><b class="${m.elite ? 'elite' : ''}">${zone.icon} ${m.name}</b><span class="num">${Math.max(0, Math.round(m.hp))} / ${m.maxHp}</span></div>${bar(m.hp, m.maxHp, 'mon')}`
+    ? `${inBoss ? '<div class="boss-tag">首領戰</div>' : ''}<div class="row"><b class="${m.elite ? 'elite' : ''}${inBoss ? ' boss-name' : ''}">${zone.icon} ${m.name}</b><span class="num">${Math.max(0, Math.round(m.hp)).toLocaleString()} / ${m.maxHp.toLocaleString()}</span></div>${bar(m.hp, m.maxHp, inBoss ? 'boss' : 'mon')}`
     : `<div class="sub">尋找下一隻怪物……</div>${bar(0, 1, 'mon')}`);
+  $('#monster').classList.toggle('in-boss', !!inBoss);
   const lines = state.log.filter(l => !importantOnly || l.important).slice(-CONFIG.logLines).reverse();
   setHTML($('#log'), lines.map(l => {
     const r = l.rarity !== undefined ? ` r${l.rarity}` : '';
@@ -247,6 +266,117 @@ export function showLegendToast(item) {
   toastTimer = setTimeout(() => { t.hidden = true; }, 6000);
 }
 
+// ---------- 彈出視窗：離線結算、存檔碼、通關 ----------
+let modalKind = null;
+
+function openModal(kind, html) {
+  modalKind = kind;
+  const box = $('#modal');
+  box.innerHTML = `<div class="modal-panel" role="dialog" aria-modal="true">${html}</div>`;
+  box.hidden = false;
+  box.querySelector('[data-autofocus]')?.focus();
+}
+
+function closeModal() {
+  modalKind = null;
+  $('#modal').hidden = true;
+  $('#modal').innerHTML = '';
+}
+
+export function showOfflineCard(sum) {
+  const from = CONFIG.zones[sum.fromZone - 1];
+  const zone = CONFIG.zones[sum.zone - 1];
+  const fell = sum.zone !== sum.fromZone;
+  const special = [...sum.legends, ...sum.kept.filter(i => i.rarity >= 2)];
+  const list = special.length
+    ? `<ul class="items">${special.map(it => `<li>${itemLabel(it)}</li>`).join('')}</ul>`
+    : '<p class="sub">這次沒有撿到稀有以上的裝備。</p>';
+  openModal('offline', `
+    <h2 class="modal-title">歡迎回來！</h2>
+    <p class="sub">你離開了 ${formatDuration(sum.seconds)}，角色在 ${zone.icon} ${zone.name} 繼續冒險。</p>
+    ${fell ? `<p class="hint">角色在 ${from.name} 撐不住，所以這段時間改在 ${zone.name} 刷怪。</p>` : ''}
+    <div class="sum-grid">
+      <div><span class="sub">擊敗</span><b class="num">${sum.kills.toLocaleString()} 隻</b></div>
+      <div><span class="sub">金幣</span><b class="num gold">+${sum.gold.toLocaleString()}</b></div>
+      <div><span class="sub">經驗</span><b class="num">+${sum.exp.toLocaleString()}</b></div>
+      <div><span class="sub">升級</span><b class="num">${sum.levels ? `+${sum.levels} 級` : '沒有升級'}</b></div>
+      <div><span class="sub">放進背包</span><b class="num">${sum.kept.length + sum.legends.length} 件</b></div>
+      <div><span class="sub">自動分解</span><b class="num">${sum.decomposed.toLocaleString()} 件</b></div>
+    </div>
+    <h3>撿到的好東西</h3>
+    ${list}
+    <div class="actions end"><button data-ui="closeModal" class="primary" data-autofocus>收下</button></div>`);
+  if (sum.legends.length) showLegendToast(sum.legends[sum.legends.length - 1]);
+}
+
+function showSaveDialog() {
+  const code = exportCode(state);
+  openModal('save', `
+    <h2 class="modal-title">存檔碼</h2>
+    <p class="sub">存檔放在這個瀏覽器裡，每 10 秒自動儲存。清除瀏覽器資料會刪掉存檔，記得偶爾把存檔碼複製起來備份。</p>
+    <label class="field">目前的存檔碼
+      <textarea id="exportCode" rows="4" readonly>${code}</textarea>
+    </label>
+    <div class="actions"><button data-ui="copyCode" class="primary" data-autofocus>複製存檔碼</button><span id="copyMsg" class="sub" role="status"></span></div>
+    <label class="field">匯入存檔碼
+      <textarea id="importCode" rows="4" placeholder="把存檔碼貼在這裡"></textarea>
+    </label>
+    <div class="actions">
+      ${isArmed('import', 0)
+        ? '<button data-ui="importCode" class="warn">再按一次，覆蓋目前進度</button>'
+        : '<button data-ui="importCode">匯入</button>'}
+      <span id="importMsg" class="sub" role="status"></span>
+    </div>
+    <div class="actions end"><button data-ui="closeModal">關閉</button></div>`);
+}
+
+export function showEnding() {
+  const days = Math.max(1, Math.ceil(((state.clearedAt || Date.now()) - state.startedAt) / 86400000));
+  openModal('ending', `
+    <h2 class="modal-title">🌈 通關了！</h2>
+    <p>你打倒了幸運雲端的彩虹龍，口袋寶箱的冒險告一段落。</p>
+    <div class="sum-grid">
+      <div><span class="sub">等級</span><b class="num">Lv ${state.level}</b></div>
+      <div><span class="sub">遊玩天數</span><b class="num">${days} 天</b></div>
+      <div><span class="sub">拿到的傳說</span><b class="num r3">${state.stats.legends} 件</b></div>
+      <div><span class="sub">擊敗怪物</span><b class="num">${state.stats.kills.toLocaleString()} 隻</b></div>
+    </div>
+    <p class="sub">之後可以在任何區域繼續刷傳說和更好的詞綴。</p>
+    <div class="actions end"><button data-ui="closeModal" class="primary" data-autofocus>繼續刷寶</button></div>`);
+}
+
+async function copyCode() {
+  const ta = $('#exportCode');
+  const msg = $('#copyMsg');
+  try {
+    await navigator.clipboard.writeText(ta.value);
+    msg.textContent = '已複製';
+  } catch (e) {
+    ta.focus();
+    ta.select();
+    msg.textContent = '請按 Ctrl+C 或 ⌘+C 複製選取的文字';
+  }
+}
+
+function doImport() {
+  const raw = $('#importCode').value;
+  const msg = $('#importMsg');
+  const next = importCode(raw);
+  if (!next) {
+    armed = null;
+    msg.textContent = '這不是有效的存檔碼，請確認有完整複製（開頭是 PL1-）。';
+    return;
+  }
+  if (!arm('import', 0)) {
+    const keep = raw;
+    showSaveDialog();
+    $('#importCode').value = keep;
+    return;
+  }
+  closeModal();
+  onImport(next);
+}
+
 // ---------- 操作 ----------
 function keepHpRatio(fn) {
   const before = computeStats(state);
@@ -282,12 +412,25 @@ function handleClick(e) {
     return;
   }
 
+  const zoneBtn = e.target.closest('button[data-zone]');
+  if (zoneBtn) {
+    if (changeZone(state, Number(zoneBtn.dataset.zone))) onChange();
+    render();
+    return;
+  }
+
   const ui = e.target.closest('[data-ui]');
   if (ui) {
     const what = ui.dataset.ui;
     if (what === 'openSkills') skillsOpen = true;
     if (what === 'closeSkills') skillsOpen = false;
     if (what === 'resetSkills') { keepHpRatio(() => resetSkills(state)); onChange(); }
+    if (what === 'startBoss') startBoss(state);
+    if (what === 'abandonBoss') abandonBoss(state);
+    if (what === 'openSave') showSaveDialog();
+    if (what === 'copyCode') copyCode();
+    if (what === 'importCode') doImport();
+    if (what === 'closeModal') closeModal();
     render();
     if (what === 'openSkills') $('#skills button[data-ui="closeSkills"]')?.focus();
     return;
@@ -313,15 +456,21 @@ function handleClick(e) {
   }
 }
 
-export function initUI(s, changeHandler) {
+export function initUI(s, changeHandler, importHandler) {
   state = s;
   onChange = changeHandler;
+  onImport = importHandler || (() => {});
 
   document.body.addEventListener('click', handleClick);
 
   document.body.addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.target.matches('li.item[data-id]')) e.target.click();
+    if (e.key === 'Escape' && modalKind) { closeModal(); return; }
     if (e.key === 'Escape' && skillsOpen) { skillsOpen = false; render(); }
+  });
+
+  $('#modal').addEventListener('click', e => {
+    if (e.target.id === 'modal') closeModal();
   });
 
   // 點技能樹外面的半透明區域也能關閉

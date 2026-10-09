@@ -21,6 +21,9 @@ export function newState() {
     monster: null,
     log: [],
     stats: { kills: 0, legends: 0, deaths: 0 },
+    bossesDefeated: [],
+    startedAt: Date.now(),
+    clearedAt: null,
     savedAt: Date.now(),
   };
 }
@@ -103,10 +106,24 @@ export function learnSkill(state, id) {
 
 export function resetSkills(state) { state.skills = {}; }
 
+// 存檔不含戰鬥中的怪物與戰鬥紀錄；首領戰不會被存下來
+function serialize(state) {
+  const copy = { ...state, monster: null, log: state.log.slice(-60), savedAt: Date.now() };
+  return JSON.stringify(copy);
+}
+
+function revive(data) {
+  if (!data || typeof data !== 'object' || data.version !== CONFIG.version) return null;
+  if (!Number.isFinite(data.level) || !data.equipped || !Array.isArray(data.bag)) return null;
+  const s = { ...newState(), ...data, monster: null };
+  s.stats = { ...newState().stats, ...(data.stats || {}) };
+  return s;
+}
+
 export function save(state) {
   try {
-    const copy = { ...state, monster: null, savedAt: Date.now() };
-    localStorage.setItem(SAVE_KEY, JSON.stringify(copy));
+    state.savedAt = Date.now();
+    localStorage.setItem(SAVE_KEY, serialize(state));
   } catch (e) { /* 瀏覽器不允許儲存時略過 */ }
 }
 
@@ -114,9 +131,30 @@ export function load() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
-    const data = JSON.parse(raw);
-    if (!data || data.version !== CONFIG.version) return null;
-    return { ...newState(), ...data, monster: null };
+    return revive(JSON.parse(raw));
+  } catch (e) {
+    return null;
+  }
+}
+
+// ---------- 存檔碼（10）----------
+const CODE_PREFIX = 'PL1-';
+
+export function exportCode(state) {
+  const bytes = new TextEncoder().encode(serialize(state));
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return CODE_PREFIX + btoa(bin);
+}
+
+// 成功回傳狀態物件，失敗回傳 null
+export function importCode(code) {
+  try {
+    const trimmed = String(code).trim().replace(/\s+/g, '');
+    if (!trimmed.startsWith(CODE_PREFIX)) return null;
+    const bin = atob(trimmed.slice(CODE_PREFIX.length));
+    const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+    return revive(JSON.parse(new TextDecoder().decode(bytes)));
   } catch (e) {
     return null;
   }
